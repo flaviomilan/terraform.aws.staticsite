@@ -122,7 +122,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           width  = 12
           height = 6
           properties = {
-            title   = "CloudFront Requests"
+            title = "CloudFront Requests"
             metrics = [
               ["AWS/CloudFront", "Requests", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Sum" }]
             ]
@@ -137,7 +137,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           width  = 12
           height = 6
           properties = {
-            title   = "CloudFront Error Rates"
+            title = "CloudFront Error Rates"
             metrics = [
               ["AWS/CloudFront", "4xxErrorRate", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Average", color = "#ff9900" }],
               ["AWS/CloudFront", "5xxErrorRate", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Average", color = "#d13212" }]
@@ -153,7 +153,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           width  = 12
           height = 6
           properties = {
-            title   = "CloudFront Bytes Transferred"
+            title = "CloudFront Bytes Transferred"
             metrics = [
               ["AWS/CloudFront", "BytesDownloaded", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Sum", label = "Downloaded" }],
               ["AWS/CloudFront", "BytesUploaded", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Sum", label = "Uploaded" }]
@@ -169,7 +169,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           width  = 12
           height = 6
           properties = {
-            title   = "CloudFront Cache Hit Rate"
+            title = "CloudFront Cache Hit Rate"
             metrics = [
               ["AWS/CloudFront", "CacheHitRate", "DistributionId", aws_cloudfront_distribution.s3_distribution[0].id, "Region", "Global", { stat = "Average" }]
             ]
@@ -186,7 +186,7 @@ resource "aws_cloudwatch_dashboard" "main" {
           width  = 12
           height = 6
           properties = {
-            title   = "WAF Allowed vs Blocked"
+            title = "WAF Allowed vs Blocked"
             metrics = [
               ["AWS/WAFV2", "AllowedRequests", "WebACL", aws_wafv2_web_acl.waf[0].name, "Region", "Global", "Rule", "ALL", { stat = "Sum", color = "#2ca02c" }],
               ["AWS/WAFV2", "BlockedRequests", "WebACL", aws_wafv2_web_acl.waf[0].name, "Region", "Global", "Rule", "ALL", { stat = "Sum", color = "#d13212" }]
