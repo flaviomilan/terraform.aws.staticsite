@@ -1,84 +1,95 @@
 # Terraform AWS Static Site
 
-Infraestrutura Terraform para deploy de sites estáticos **altamente seguros, escaláveis e de baixo custo** na AWS, utilizando S3, CloudFront, Route53, ACM e WAF.
+Terraform infrastructure for deploying **highly secure, scalable, and cost-effective** static sites on AWS using S3, CloudFront, Route53, ACM, and WAF.
 
-## ✨ Recursos
+## ✨ Features
 
-### 🔒 Segurança
-- **AWS WAF v2** com 5 camadas de proteção: Rate Limiting, OWASP Common Rules, Known Bad Inputs, IP Reputation e Anonymous IP filtering
-- **Security Headers completos**: HSTS (preload), CSP, X-Frame-Options, X-Content-Type-Options, XSS-Protection, Referrer-Policy, Permissions-Policy
-- **S3 privado** com criptografia AES-256 (SSE-S3), versionamento e acesso exclusivo via CloudFront (OAC com SigV4)
-- **TLS 1.2+** com protocolo mínimo configurável
-- **OIDC** para autenticação segura no GitHub Actions (sem access keys de longa duração)
+### 🔒 Security
+- **AWS WAF v2** with 5 layers of protection: Rate Limiting, OWASP Common Rules, Known Bad Inputs, IP Reputation, and Anonymous IP filtering
+- **Complete Security Headers**: HSTS (preload), CSP, X-Frame-Options, X-Content-Type-Options, XSS-Protection, Referrer-Policy, Permissions-Policy
+- **Private S3** with AES-256 encryption (SSE-S3), versioning, and exclusive access via CloudFront (OAC with SigV4)
+- **TLS 1.2+** with configurable minimum protocol version
+- **Flexible authentication**: supports both OIDC (recommended) and static access keys for GitHub Actions
 
 ### 🚀 Performance
-- **CloudFront com HTTP/3** (QUIC) para baixa latência
-- **IPv6** com registros A e AAAA
-- **Compressão automática** (Brotli/Gzip)
-- **Certificado SSL** com SAN para domínio principal e www
+- **CloudFront with HTTP/3** (QUIC) for low latency
+- **IPv6** with A and AAAA records
+- **Automatic compression** (Brotli/Gzip)
+- **SSL Certificate** with SAN for root domain and www
 - **SPA routing** via CloudFront Function
 
-### 📊 Monitoramento
-- **CloudWatch Dashboard** com métricas de requests, erros, bytes e cache hit rate
-- **Alarmes** para taxa de erros 5xx/4xx e picos de bloqueio WAF
-- **Notificações por email** via SNS
-- **WAF Logging** para CloudWatch (apenas eventos de bloqueio/contagem)
+### 📊 Monitoring (opt-in)
+- **CloudWatch Dashboard** with request, error, bytes, and cache hit rate metrics
+- **Alarms** for 5xx/4xx error rate spikes and WAF block surges
+- **Email notifications** via SNS
+- **WAF Logging** to CloudWatch (block/count events only)
 - **CloudFront Real-Time Metrics**
 
 ### 🔄 CI/CD
-- **Deploy em 4 etapas** com approval gates para segurança
-- **Terraform Plan** como artefato para review antes de aplicar
-- **Verificação de propagação DNS** automática antes de validar certificados
-- **Invalidação automática** do cache CloudFront após deploy
+- **4-step deployment** with approval gates for safety
+- **Terraform Plan** saved as artifact for review before applying
+- **Automatic DNS propagation check** before certificate validation
+- **Automatic CloudFront cache invalidation** after deploy
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
-├── src/                     # Infraestrutura principal
-│   ├── main.tf              # Provider e backend
-│   ├── variables.tf         # Variáveis de entrada (com validações)
-│   ├── locals.tf            # Valores locais e tags
-│   ├── s3.tf                # Bucket S3 (criptografia, versionamento, upload)
+├── src/                     # Main infrastructure
+│   ├── main.tf              # Provider and backend
+│   ├── variables.tf         # Input variables (with validations)
+│   ├── locals.tf            # Local values and tags
+│   ├── s3.tf                # S3 bucket (encryption, versioning, upload)
 │   ├── cloudfront.tf        # CloudFront (HTTP/3, headers, OAC, function)
-│   ├── acm.tf               # Certificado ACM (DNS validation, SAN www)
-│   ├── route53.tf           # DNS (A, AAAA, www, validação ACM)
-│   ├── waf.tf               # WAF v2 (rate limit, regras gerenciadas, logging)
-│   ├── monitoring.tf        # CloudWatch (dashboard, alarmes, SNS)
+│   ├── acm.tf               # ACM certificate (DNS validation, SAN www)
+│   ├── route53.tf           # DNS (A, AAAA, www, ACM validation)
+│   ├── waf.tf               # WAF v2 (rate limit, managed rules, logging)
+│   ├── monitoring.tf        # CloudWatch (dashboard, alarms, SNS)
 │   ├── data.tf              # Data sources
 │   ├── outputs.tf           # Outputs
 │   └── function/
 │       └── function.js      # CloudFront function (SPA rewrite)
 │
-├── bootstrap/               # Backend para Terraform state
-│   ├── main.tf              # S3 + DynamoDB para state locking
+├── bootstrap/               # Terraform state backend
+│   ├── main.tf              # S3 + DynamoDB for state locking
 │   ├── variables.tf
 │   └── outputs.tf
 │
 └── .github/
     ├── workflows/
-    │   ├── bootstrap.yml    # Criar backend (manual, 1x)
-    │   ├── deploy.yml       # Deploy principal (4 etapas)
-    │   └── pr-check.yml     # Validação de PRs
+    │   ├── bootstrap.yml    # Create backend (manual, one-time)
+    │   ├── deploy.yml       # Main deployment (4 steps)
+    │   └── pr-check.yml     # PR validation
     └── dependabot.yml
 ```
 
-## 🚀 Começando
+## 🚀 Getting Started
 
-### Pré-requisitos
+### Prerequisites
 
-1. **Conta AWS** com permissões para criar IAM, S3, CloudFront, Route53, ACM e WAF
-2. **Domínio registrado** em qualquer provedor (Route 53, GoDaddy, Namecheap, etc.)
-3. **Repositório GitHub** com GitHub Actions habilitado
+1. **AWS Account** with permissions to create IAM, S3, CloudFront, Route53, ACM, and WAF resources
+2. **Registered domain** at any registrar (Route 53, GoDaddy, Namecheap, etc.)
+3. **GitHub repository** with GitHub Actions enabled
 
-### Etapa 1: Configurar OIDC (recomendado)
+### Step 1: Configure AWS Authentication
 
-Configure a autenticação OIDC entre GitHub Actions e AWS para eliminar o uso de access keys:
+You have two options for authenticating GitHub Actions with AWS:
 
-1. No console AWS, vá em **IAM > Identity providers > Add provider**
-2. Selecione **OpenID Connect**
+#### Option A: Access Keys (simpler)
+
+1. In your repository, go to **Settings > Secrets and variables > Actions**
+2. Create two secrets:
+   - `AWS_ACCESS_KEY_ID`: Your AWS access key
+   - `AWS_SECRET_ACCESS_KEY`: Your AWS secret access key
+
+#### Option B: OIDC (recommended for production)
+
+OIDC uses short-lived tokens instead of long-lived access keys:
+
+1. In the AWS console, go to **IAM > Identity providers > Add provider**
+2. Select **OpenID Connect**
 3. Provider URL: `https://token.actions.githubusercontent.com`
 4. Audience: `sts.amazonaws.com`
-5. Crie uma IAM Role com trust policy para seu repositório:
+5. Create an IAM Role with a trust policy for your repository:
 
 ```json
 {
@@ -103,107 +114,115 @@ Configure a autenticação OIDC entre GitHub Actions e AWS para eliminar o uso d
 }
 ```
 
-6. Anexe políticas para S3, CloudFront, Route53, ACM, WAF, CloudWatch e SNS
-7. No repositório GitHub, adicione o secret `AWS_ROLE_ARN` com o ARN da role criada
+6. Attach policies for S3, CloudFront, Route53, ACM, WAF, CloudWatch, and SNS
+7. In your GitHub repository, add the secret `AWS_ROLE_ARN` with the role ARN
 
-### Etapa 2: Bootstrap do State Backend (opcional mas recomendado)
+> **Note:** The workflows automatically detect which credentials are available. If `AWS_ROLE_ARN` is set, OIDC is used. Otherwise, it falls back to access keys.
 
-1. No GitHub, vá em **Actions > Bootstrap State Backend > Run workflow**
-2. Informe o nome do bucket S3 para o state
-3. Após a execução, atualize `src/main.tf` com a configuração do backend S3
+### Step 2: Bootstrap State Backend (optional but recommended)
 
-### Etapa 3: Configurar Variáveis
+1. In GitHub, go to **Actions > Bootstrap State Backend > Run workflow**
+2. Enter the S3 bucket name for the state
+3. After execution, update `src/main.tf` with the S3 backend configuration
 
-Crie um arquivo `src/terraform.tfvars`:
+### Step 3: Configure Variables
+
+Create a `src/terraform.tfvars` file:
 
 ```hcl
-domain      = "seudominio.com.br"
-bucket_name = "seudominio-static-site"
+domain      = "yourdomain.com"
+bucket_name = "yourdomain-static-site"
 files_path  = "./function"
 
-# Opcionais
-project_name       = "MeuSite"
-environment        = "production"
-enable_waf         = true
-enable_monitoring  = true
-notification_email = "seu@email.com"
-csp_policy         = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+# Optional (all cost-bearing features default to false)
+project_name         = "MySite"
+environment          = "production"
+enable_waf           = true
+enable_monitoring    = true
+enable_s3_versioning = true
+notification_email   = "your@email.com"
+csp_policy           = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
 ```
 
-Adicione a variável `DOMAIN` no GitHub em **Settings > Environments > dns-validated > Environment variables**.
+Add the `DOMAIN` variable in GitHub at **Settings > Environments > dns-validated > Environment variables**.
 
-### Etapa 4: Deploy
+### Step 4: Deploy
 
-1. **Push para `main`** — aciona o workflow
-2. **Plan** executa automaticamente e salva o plano como artefato
-3. **DNS Deploy** — cria a zona Route53 e exibe os nameservers nos logs
-4. **Configure os nameservers** no seu registrador de domínio
-5. **Aguarde a propagação DNS** (minutos a horas)
-6. **Aprove o environment `dns-validated`** — o workflow verifica a propagação DNS e cria o certificado ACM + toda a infraestrutura
-7. **Aprove o environment `production`** — faz upload dos arquivos e invalida o cache
+1. **Push to `main`** — triggers the workflow
+2. **Plan** runs automatically and saves the plan as an artifact
+3. **DNS Deploy** — creates the Route53 zone and outputs nameservers in the logs
+4. **Configure nameservers** at your domain registrar
+5. **Wait for DNS propagation** (minutes to hours)
+6. **Approve the `dns-validated` environment** — the workflow verifies DNS propagation and creates the ACM certificate + full infrastructure
+7. **Approve the `production` environment** — uploads files and invalidates the cache
 
 ```
-Push → [Plan] → [DNS Deploy] → Nameservers nos logs
+Push → [Plan] → [DNS Deploy] → Nameservers in logs
                                       ↓
-                    Configurar nameservers no registrador
+                    Configure nameservers at registrar
                                       ↓
-         [Approve dns-validated] → [Verifica DNS] → [ACM + Infra]
-                                                          ↓
+         [Approve dns-validated] → [Verify DNS] → [ACM + Infra]
+                                                         ↓
                [Approve production] → [Upload + Cache Invalidation]
 ```
 
-## ⚙️ Variáveis
+## ⚙️ Variables
 
-| Variável | Tipo | Padrão | Descrição |
+| Variable | Type | Default | Description |
 |---|---|---|---|
-| `domain` | string | — | Domínio do site (ex: `example.com`) |
-| `bucket_name` | string | — | Nome do bucket S3 |
-| `files_path` | string | — | Caminho dos arquivos estáticos |
-| `domain_enabled` | bool | `false` | Habilitar recursos de domínio (ACM, CloudFront, etc.) |
-| `enable_waf` | bool | `false` | Habilitar WAF (~$5/mês + regras + requests) |
-| `project_name` | string | `StaticSite` | Nome do projeto para tags |
-| `environment` | string | `production` | Ambiente (development/staging/production) |
-| `csp_policy` | string | restritivo | Content-Security-Policy customizável |
-| `waf_rate_limit` | number | `2000` | Limite de requests por 5min por IP |
-| `enable_monitoring` | bool | `false` | Dashboard e alarmes CloudWatch (~$10-15/mês) |
-| `notification_email` | string | `""` | Email para alertas (vazio = desativado) |
-| `minimum_tls_version` | string | `TLSv1.2_2021` | Versão mínima TLS |
-| `force_destroy_zone` | bool | `false` | Permitir destruição da zona DNS |
-| `enable_s3_versioning` | bool | `false` | Versionamento S3 (custo extra de armazenamento) |
+| `domain` | string | — | Site domain (e.g., `example.com`) |
+| `bucket_name` | string | — | S3 bucket name |
+| `files_path` | string | — | Path to static site files |
+| `domain_enabled` | bool | `false` | Enable domain-related resources (ACM, CloudFront, etc.) |
+| `enable_waf` | bool | `false` | Enable WAF (~$5/month + rules + requests) |
+| `project_name` | string | `StaticSite` | Project name for tags |
+| `environment` | string | `production` | Environment (development/staging/production) |
+| `csp_policy` | string | restrictive | Customizable Content-Security-Policy |
+| `waf_rate_limit` | number | `2000` | Max requests per 5min per IP |
+| `enable_monitoring` | bool | `false` | CloudWatch dashboard and alarms (~$10-15/month) |
+| `notification_email` | string | `""` | Email for alerts (empty = disabled) |
+| `minimum_tls_version` | string | `TLSv1.2_2021` | Minimum TLS version |
+| `force_destroy_zone` | bool | `false` | Allow DNS zone destruction |
+| `enable_s3_versioning` | bool | `false` | S3 versioning (extra storage cost) |
 
-## 💰 Custos Estimados
+## 💰 Estimated Costs
 
-Todos os recursos com custo adicional são **opt-in** (desabilitados por padrão).
+All cost-bearing features are **opt-in** (disabled by default).
 
-| Recurso | Free Tier | Custo (se habilitado) | Variável |
+| Resource | Free Tier | Cost (if enabled) | Variable |
 |---|---|---|---|
-| S3 + CloudFront | 5GB + 1TB/mês + 10M req | < $0.05/mês | sempre ativo |
-| Route53 | — | $0.50/mês por zona | sempre ativo |
-| ACM | Grátis | Grátis | sempre ativo |
-| S3 Versioning | — | ~$0.02-2.00/mês | `enable_s3_versioning` |
-| WAF | — | ~$7-10/mês | `enable_waf` |
-| Monitoramento | 10 alarmes grátis | ~$10-15/mês | `enable_monitoring` |
+| S3 + CloudFront | 5GB + 1TB/month + 10M req | < $0.05/month | always active |
+| Route53 | — | $0.50/month per zone | always active |
+| ACM | Free | Free | always active |
+| S3 Versioning | — | ~$0.02-2.00/month | `enable_s3_versioning` |
+| WAF | — | ~$7-10/month | `enable_waf` |
+| Monitoring | 10 free alarms | ~$10-15/month | `enable_monitoring` |
 
 ## 🔧 Troubleshooting
 
-### DNS não propagou após horas
-- Verifique se os nameservers foram configurados corretamente no registrador
-- Use `dig NS seudominio.com` para verificar a propagação
-- Alguns registradores levam até 48h para propagar
+### DNS not propagated after hours
+- Verify nameservers were correctly configured at the registrar
+- Use `dig NS yourdomain.com` to check propagation
+- Some registrars take up to 48 hours to propagate
 
-### Certificado ACM ficou preso em "Pending validation"
-- Confirme que os nameservers apontam para o Route53
-- Verifique os registros de validação: `dig CNAME _acm-challenge.seudominio.com`
-- O ACM tem timeout de 72h para validação
+### ACM certificate stuck in "Pending validation"
+- Confirm nameservers point to Route53
+- Check validation records: `dig CNAME _acm-challenge.yourdomain.com`
+- ACM has a 72-hour timeout for validation
 
-### Erro 403 no CloudFront
-- O bucket S3 é privado por design — acesse apenas via CloudFront
-- Verifique se a policy do bucket referencia o CloudFront distribution correto
+### CloudFront 403 error
+- The S3 bucket is private by design — access only via CloudFront
+- Verify the bucket policy references the correct CloudFront distribution
 
-### WAF bloqueando requests legítimos
-- Revise os logs do WAF no CloudWatch (`aws-waf-logs-*`)
-- Ajuste o `waf_rate_limit` se necessário
+### WAF blocking legitimate requests
+- Review WAF logs in CloudWatch (`aws-waf-logs-*`)
+- Adjust `waf_rate_limit` as needed
 
-## 🤝 Contribuições
+### CI failing with "Credentials could not be loaded"
+- Ensure either `AWS_ACCESS_KEY_ID` + `AWS_SECRET_ACCESS_KEY` or `AWS_ROLE_ARN` secrets are configured
+- For OIDC, verify the IAM OIDC provider and role trust policy are set up correctly
+- The PR quality check workflow does **not** require AWS credentials
 
-Contribuições são bem-vindas! Abra issues e pull requests para melhorar este projeto.
+## 🤝 Contributing
+
+Contributions are welcome! Open issues and pull requests to improve this project.

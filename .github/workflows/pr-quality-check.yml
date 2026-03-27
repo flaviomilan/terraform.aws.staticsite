@@ -6,13 +6,8 @@ on:
       - main
 
 permissions:
-  id-token: write
   contents: read
   pull-requests: write
-
-env:
-  AWS_REGION: us-east-1
-  TF_WORKING_DIR: ./src
 
 jobs:
   terraform-check:
@@ -22,26 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Configure AWS Credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
-        working-directory: ${{ env.TF_WORKING_DIR }}
+        working-directory: ./src
 
       - name: Terraform Init
         run: terraform init -backend=false
-        working-directory: ${{ env.TF_WORKING_DIR }}
+        working-directory: ./src
 
       - name: Terraform Validate
         run: terraform validate
-        working-directory: ${{ env.TF_WORKING_DIR }}
+        working-directory: ./src
 
   security-scan:
     name: "🛡️ Security Scan"
