@@ -44,7 +44,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "s3_sse" {
 }
 
 resource "aws_s3_bucket_versioning" "s3_versioning" {
-  count = var.domain_enabled ? 1 : 0
+  count = var.domain_enabled && var.enable_s3_versioning ? 1 : 0
 
   bucket = aws_s3_bucket.s3_bucket[0].id
 
@@ -54,7 +54,7 @@ resource "aws_s3_bucket_versioning" "s3_versioning" {
 }
 
 resource "aws_s3_bucket_lifecycle_configuration" "s3_lifecycle" {
-  count = var.domain_enabled ? 1 : 0
+  count = var.domain_enabled && var.enable_s3_versioning ? 1 : 0
 
   bucket = aws_s3_bucket.s3_bucket[0].id
 

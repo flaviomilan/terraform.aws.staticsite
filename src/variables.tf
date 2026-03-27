@@ -88,8 +88,8 @@ variable "waf_rate_limit" {
 
 variable "enable_monitoring" {
   type        = bool
-  default     = true
-  description = "Enable CloudWatch monitoring dashboards and alarms for CloudFront and WAF."
+  default     = false
+  description = "Enable CloudWatch monitoring dashboards, alarms, and CloudFront real-time metrics. Adds ~$10-15/month (dashboard $3 + real-time metrics ~$7-10)."
 }
 
 variable "notification_email" {
@@ -107,4 +107,10 @@ variable "minimum_tls_version" {
     condition     = contains(["TLSv1.2_2018", "TLSv1.2_2019", "TLSv1.2_2021"], var.minimum_tls_version)
     error_message = "TLS version must be one of: TLSv1.2_2018, TLSv1.2_2019, TLSv1.2_2021."
   }
+}
+
+variable "enable_s3_versioning" {
+  type        = bool
+  default     = false
+  description = "Enable S3 bucket versioning to keep old file versions. Adds storage costs for non-current object versions (cleaned up after 30 days via lifecycle rule)."
 }

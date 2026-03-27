@@ -165,21 +165,24 @@ Push → [Plan] → [DNS Deploy] → Nameservers nos logs
 | `environment` | string | `production` | Ambiente (development/staging/production) |
 | `csp_policy` | string | restritivo | Content-Security-Policy customizável |
 | `waf_rate_limit` | number | `2000` | Limite de requests por 5min por IP |
-| `enable_monitoring` | bool | `true` | Dashboard e alarmes CloudWatch |
+| `enable_monitoring` | bool | `false` | Dashboard e alarmes CloudWatch (~$10-15/mês) |
 | `notification_email` | string | `""` | Email para alertas (vazio = desativado) |
 | `minimum_tls_version` | string | `TLSv1.2_2021` | Versão mínima TLS |
 | `force_destroy_zone` | bool | `false` | Permitir destruição da zona DNS |
+| `enable_s3_versioning` | bool | `false` | Versionamento S3 (custo extra de armazenamento) |
 
 ## 💰 Custos Estimados
 
-| Recurso | Free Tier | Produção (~100k req/mês) |
-|---|---|---|
-| S3 | 5GB grátis | < $0.05/mês |
-| CloudFront | 1TB/mês + 10M requests | < $1.00/mês |
-| Route53 | — | $0.50/mês por zona |
-| ACM | Grátis | Grátis |
-| WAF (opcional) | — | ~$7-10/mês |
-| CloudWatch (monitoramento) | 10 alarmes grátis | < $1.00/mês |
+Todos os recursos com custo adicional são **opt-in** (desabilitados por padrão).
+
+| Recurso | Free Tier | Custo (se habilitado) | Variável |
+|---|---|---|---|
+| S3 + CloudFront | 5GB + 1TB/mês + 10M req | < $0.05/mês | sempre ativo |
+| Route53 | — | $0.50/mês por zona | sempre ativo |
+| ACM | Grátis | Grátis | sempre ativo |
+| S3 Versioning | — | ~$0.02-2.00/mês | `enable_s3_versioning` |
+| WAF | — | ~$7-10/mês | `enable_waf` |
+| Monitoramento | 10 alarmes grátis | ~$10-15/mês | `enable_monitoring` |
 
 ## 🔧 Troubleshooting
 
