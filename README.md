@@ -1,68 +1,206 @@
 # Terraform AWS Static Site
 
-Este repositório contém um projeto Terraform para implantar um site estático de forma **altamente segura, escalável e de baixo custo** na AWS, utilizando S3, CloudFront, e as melhores práticas de segurança.
+Infraestrutura Terraform para deploy de sites estáticos **altamente seguros, escaláveis e de baixo custo** na AWS, utilizando S3, CloudFront, Route53, ACM e WAF.
 
-O objetivo deste projeto é **democratizar o acesso a uma infraestrutura de ponta**, permitindo que qualquer pessoa, mesmo com pouco conhecimento de AWS, possa ter seu site estático no ar com segurança e performance de nível empresarial.
+## ✨ Recursos
 
-## ✨ Por que usar este projeto?
+### 🔒 Segurança
+- **AWS WAF v2** com 5 camadas de proteção: Rate Limiting, OWASP Common Rules, Known Bad Inputs, IP Reputation e Anonymous IP filtering
+- **Security Headers completos**: HSTS (preload), CSP, X-Frame-Options, X-Content-Type-Options, XSS-Protection, Referrer-Policy, Permissions-Policy
+- **S3 privado** com criptografia AES-256 (SSE-S3), versionamento e acesso exclusivo via CloudFront (OAC com SigV4)
+- **TLS 1.2+** com protocolo mínimo configurável
+- **OIDC** para autenticação segura no GitHub Actions (sem access keys de longa duração)
 
-*   🔒 **Segurança em Primeiro Lugar:** Configuração robusta de segurança, incluindo:
-    *   **AWS WAF:** Firewall de Aplicação Web com regras gerenciadas pela AWS para proteção contra ataques comuns (OWASP Top 10).
-    *   **Cabeçalhos de Segurança:** Implementação de `Strict-Transport-Security` (HSTS), `X-Frame-Options`, `X-Content-Type-Options` e `Content-Security-Policy` (CSP) para mitigar vulnerabilidades no lado do cliente.
-    *   **Acesso Restrito ao S3:** O bucket S3 é privado e acessível apenas através do CloudFront utilizando Origin Access Control (OAC).
-    *   **Redirecionamento para HTTPS:** Todo o tráfego é forçado para HTTPS.
-*   🚀 **Alta Performance e Escalabilidade:**
-    *   **Amazon CloudFront:** Conteúdo distribuído globalmente para baixa latência e alta velocidade de entrega.
-    *   **Amazon S3:** Armazenamento de objetos durável e escalável para os arquivos do seu site.
-*   💰 **Custo-Benefício:** Arquitetura serverless que se beneficia do generoso Free Tier da AWS, tornando a hospedagem extremamente barata ou até mesmo gratuita para sites com tráfego moderado.
-*   🔄 **Deploy Simplificado com GitHub Actions:**
-    *   **Processo de 2 Etapas:** O deploy é dividido em duas etapas para facilitar a configuração de domínios recém-registrados:
-        1.  **Criação do DNS:** Cria a zona hospedada no Route 53 e fornece os nameservers.
-        2.  **Deploy do Site:** Após a configuração dos nameservers, um simples "aprovar" no GitHub Actions implanta todo o resto da infraestrutura.
-    *   **Totalmente Automatizado:** Faça o push para a branch `main` e deixe o GitHub Actions cuidar de todo o processo de deploy.
+### 🚀 Performance
+- **CloudFront com HTTP/3** (QUIC) para baixa latência
+- **IPv6** com registros A e AAAA
+- **Compressão automática** (Brotli/Gzip)
+- **Certificado SSL** com SAN para domínio principal e www
+- **SPA routing** via CloudFront Function
+
+### 📊 Monitoramento
+- **CloudWatch Dashboard** com métricas de requests, erros, bytes e cache hit rate
+- **Alarmes** para taxa de erros 5xx/4xx e picos de bloqueio WAF
+- **Notificações por email** via SNS
+- **WAF Logging** para CloudWatch (apenas eventos de bloqueio/contagem)
+- **CloudFront Real-Time Metrics**
+
+### 🔄 CI/CD
+- **Deploy em 4 etapas** com approval gates para segurança
+- **Terraform Plan** como artefato para review antes de aplicar
+- **Verificação de propagação DNS** automática antes de validar certificados
+- **Invalidação automática** do cache CloudFront após deploy
+
+## 📁 Estrutura do Projeto
+
+```
+├── src/                     # Infraestrutura principal
+│   ├── main.tf              # Provider e backend
+│   ├── variables.tf         # Variáveis de entrada (com validações)
+│   ├── locals.tf            # Valores locais e tags
+│   ├── s3.tf                # Bucket S3 (criptografia, versionamento, upload)
+│   ├── cloudfront.tf        # CloudFront (HTTP/3, headers, OAC, function)
+│   ├── acm.tf               # Certificado ACM (DNS validation, SAN www)
+│   ├── route53.tf           # DNS (A, AAAA, www, validação ACM)
+│   ├── waf.tf               # WAF v2 (rate limit, regras gerenciadas, logging)
+│   ├── monitoring.tf        # CloudWatch (dashboard, alarmes, SNS)
+│   ├── data.tf              # Data sources
+│   ├── outputs.tf           # Outputs
+│   └── function/
+│       └── function.js      # CloudFront function (SPA rewrite)
+│
+├── bootstrap/               # Backend para Terraform state
+│   ├── main.tf              # S3 + DynamoDB para state locking
+│   ├── variables.tf
+│   └── outputs.tf
+│
+└── .github/
+    ├── workflows/
+    │   ├── bootstrap.yml    # Criar backend (manual, 1x)
+    │   ├── deploy.yml       # Deploy principal (4 etapas)
+    │   └── pr-check.yml     # Validação de PRs
+    └── dependabot.yml
+```
 
 ## 🚀 Começando
 
 ### Pré-requisitos
 
-1.  **Conta na AWS:** Você precisará de uma conta na AWS e de credenciais de acesso (`AWS_ACCESS_KEY_ID` e `AWS_SECRET_ACCESS_KEY`).
-2.  **Domínio Registrado:** Um nome de domínio registrado em qualquer provedor (Route 53, GoDaddy, Namecheap, etc.).
-3.  **Repositório no GitHub:** Um repositório no GitHub para hospedar seu código e utilizar o GitHub Actions.
+1. **Conta AWS** com permissões para criar IAM, S3, CloudFront, Route53, ACM e WAF
+2. **Domínio registrado** em qualquer provedor (Route 53, GoDaddy, Namecheap, etc.)
+3. **Repositório GitHub** com GitHub Actions habilitado
 
-### Configuração
+### Etapa 1: Configurar OIDC (recomendado)
 
-1.  **Fork este repositório:** Comece fazendo um fork deste projeto para sua conta no GitHub.
-2.  **Configure os Secrets do GitHub:**
-    *   No seu repositório, vá em `Settings > Secrets and variables > Actions`.
-    *   Crie dois novos secrets:
-        *   `AWS_ACCESS_KEY_ID`: Sua chave de acesso da AWS.
-        *   `AWS_SECRET_ACCESS_KEY`: Sua chave de acesso secreta da AWS.
-3.  **Configure as Variáveis do Terraform:**
-    *   Abra o arquivo `src/variables.tf` e ajuste as variáveis conforme necessário, principalmente `domain` e `bucket_name`.
-    *   **`enable_waf`**: Esta variável booleana (padrão: `false`) controla a criação do AWS WAF (Web Application Firewall). Defina como `true` para adicionar uma camada extra de segurança, protegendo seu site contra ataques comuns da web. Esteja ciente de que habilitar o WAF incorrerá em custos adicionais na sua conta AWS.
-4.  **Adicione os arquivos do seu site:**
-    *   Coloque os arquivos do seu site estático (HTML, CSS, JS, etc.) na pasta `src/function`.
+Configure a autenticação OIDC entre GitHub Actions e AWS para eliminar o uso de access keys:
 
-### Deploy
+1. No console AWS, vá em **IAM > Identity providers > Add provider**
+2. Selecione **OpenID Connect**
+3. Provider URL: `https://token.actions.githubusercontent.com`
+4. Audience: `sts.amazonaws.com`
+5. Crie uma IAM Role com trust policy para seu repositório:
 
-1.  **Push para a branch `main`:**
-    *   Faça o commit e o push das suas alterações para a branch `main`.
-    *   Isso acionará o workflow do GitHub Actions.
-2.  **Etapa 1: Deploy do DNS**
-    *   O job `deploy-dns` será executado automaticamente.
-    *   Ao final da execução, vá nos logs do job e procure pelo output `name_servers`.
-    *   Copie os quatro nameservers fornecidos.
-3.  **Atualize os Nameservers do seu Domínio:**
-    *   Vá até o painel de controle do seu provedor de domínio.
-    *   Substitua os nameservers existentes pelos que você copiou do output do Terraform.
-    *   **Aguarde a propagação do DNS.** Isso pode levar de alguns minutos a algumas horas.
-4.  **Etapa 2: Deploy do Site**
-    *   No seu repositório GitHub, vá para a aba `Actions` e encontre o workflow que está aguardando aprovação.
-    *   Aprove o job `deploy-site`.
-    *   O GitHub Actions agora irá provisionar o restante da infraestrutura: Certificado SSL, CloudFront, S3 e os registros DNS.
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::YOUR_ACCOUNT_ID::oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:YOUR_ORG/YOUR_REPO:*"
+        }
+      }
+    }
+  ]
+}
+```
 
-Pronto! Seu site estático está no ar, seguro e com alta performance.
+6. Anexe políticas para S3, CloudFront, Route53, ACM, WAF, CloudWatch e SNS
+7. No repositório GitHub, adicione o secret `AWS_ROLE_ARN` com o ARN da role criada
+
+### Etapa 2: Bootstrap do State Backend (opcional mas recomendado)
+
+1. No GitHub, vá em **Actions > Bootstrap State Backend > Run workflow**
+2. Informe o nome do bucket S3 para o state
+3. Após a execução, atualize `src/main.tf` com a configuração do backend S3
+
+### Etapa 3: Configurar Variáveis
+
+Crie um arquivo `src/terraform.tfvars`:
+
+```hcl
+domain      = "seudominio.com.br"
+bucket_name = "seudominio-static-site"
+files_path  = "./function"
+
+# Opcionais
+project_name       = "MeuSite"
+environment        = "production"
+enable_waf         = true
+enable_monitoring  = true
+notification_email = "seu@email.com"
+csp_policy         = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+```
+
+Adicione a variável `DOMAIN` no GitHub em **Settings > Environments > dns-validated > Environment variables**.
+
+### Etapa 4: Deploy
+
+1. **Push para `main`** — aciona o workflow
+2. **Plan** executa automaticamente e salva o plano como artefato
+3. **DNS Deploy** — cria a zona Route53 e exibe os nameservers nos logs
+4. **Configure os nameservers** no seu registrador de domínio
+5. **Aguarde a propagação DNS** (minutos a horas)
+6. **Aprove o environment `dns-validated`** — o workflow verifica a propagação DNS e cria o certificado ACM + toda a infraestrutura
+7. **Aprove o environment `production`** — faz upload dos arquivos e invalida o cache
+
+```
+Push → [Plan] → [DNS Deploy] → Nameservers nos logs
+                                      ↓
+                    Configurar nameservers no registrador
+                                      ↓
+         [Approve dns-validated] → [Verifica DNS] → [ACM + Infra]
+                                                          ↓
+               [Approve production] → [Upload + Cache Invalidation]
+```
+
+## ⚙️ Variáveis
+
+| Variável | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `domain` | string | — | Domínio do site (ex: `example.com`) |
+| `bucket_name` | string | — | Nome do bucket S3 |
+| `files_path` | string | — | Caminho dos arquivos estáticos |
+| `domain_enabled` | bool | `false` | Habilitar recursos de domínio (ACM, CloudFront, etc.) |
+| `enable_waf` | bool | `false` | Habilitar WAF (~$5/mês + regras + requests) |
+| `project_name` | string | `StaticSite` | Nome do projeto para tags |
+| `environment` | string | `production` | Ambiente (development/staging/production) |
+| `csp_policy` | string | restritivo | Content-Security-Policy customizável |
+| `waf_rate_limit` | number | `2000` | Limite de requests por 5min por IP |
+| `enable_monitoring` | bool | `true` | Dashboard e alarmes CloudWatch |
+| `notification_email` | string | `""` | Email para alertas (vazio = desativado) |
+| `minimum_tls_version` | string | `TLSv1.2_2021` | Versão mínima TLS |
+| `force_destroy_zone` | bool | `false` | Permitir destruição da zona DNS |
+
+## 💰 Custos Estimados
+
+| Recurso | Free Tier | Produção (~100k req/mês) |
+|---|---|---|
+| S3 | 5GB grátis | < $0.05/mês |
+| CloudFront | 1TB/mês + 10M requests | < $1.00/mês |
+| Route53 | — | $0.50/mês por zona |
+| ACM | Grátis | Grátis |
+| WAF (opcional) | — | ~$7-10/mês |
+| CloudWatch (monitoramento) | 10 alarmes grátis | < $1.00/mês |
+
+## 🔧 Troubleshooting
+
+### DNS não propagou após horas
+- Verifique se os nameservers foram configurados corretamente no registrador
+- Use `dig NS seudominio.com` para verificar a propagação
+- Alguns registradores levam até 48h para propagar
+
+### Certificado ACM ficou preso em "Pending validation"
+- Confirme que os nameservers apontam para o Route53
+- Verifique os registros de validação: `dig CNAME _acm-challenge.seudominio.com`
+- O ACM tem timeout de 72h para validação
+
+### Erro 403 no CloudFront
+- O bucket S3 é privado por design — acesse apenas via CloudFront
+- Verifique se a policy do bucket referencia o CloudFront distribution correto
+
+### WAF bloqueando requests legítimos
+- Revise os logs do WAF no CloudWatch (`aws-waf-logs-*`)
+- Ajuste o `waf_rate_limit` se necessário
 
 ## 🤝 Contribuições
 
-Contribuições são bem-vindas! Sinta-se à vontade para abrir issues e pull requests para melhorar este projeto.
+Contribuições são bem-vindas! Abra issues e pull requests para melhorar este projeto.

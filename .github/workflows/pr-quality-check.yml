@@ -5,53 +5,74 @@ on:
     branches:
       - main
 
-jobs:
-  quality-check:
-    name: "Run Quality Checks"
-    runs-on: ubuntu-latest
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
 
+env:
+  AWS_REGION: us-east-1
+  TF_WORKING_DIR: ./src
+
+jobs:
+  terraform-check:
+    name: "🔍 Terraform Validation"
+    runs-on: ubuntu-latest
     steps:
-      - name: "Checkout"
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: "Setup Node.js"
-        uses: actions/setup-node@v4
-        with:
-          node-version: "18"
-          cache: "npm"
-          cache-dependency-path: "apps/package-lock.json"
-
-      - name: "Install Dependencies"
-        working-directory: ./apps
-        run: npm install
-
-      - name: "Lint Code"
-        working-directory: ./apps
-        run: npm run lint
-
-      - name: "Check Formatting"
-        working-directory: ./apps
-        run: npm run format:check
-
-      - name: "Setup Terraform"
-        uses: hashicorp/setup-terraform@v3.1.2
-
-      - name: "Configure AWS Credentials"
+      - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
 
-      - name: "Terraform Init"
-        working-directory: ./infra/aws
-        run: terraform init -backend=false # Don't need backend for validation
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      - name: "Terraform Validate"
-        working-directory: ./infra/aws
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: ${{ env.TF_WORKING_DIR }}
+
+      - name: Terraform Validate
         run: terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
 
-      - name: "Run tfsec"
+  security-scan:
+    name: "🛡️ Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run tfsec
         uses: aquasecurity/tfsec-action@v1.0.3
         with:
-          working_directory: infra/aws
+          working_directory: src
+
+  bootstrap-check:
+    name: "🔍 Bootstrap Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+        working-directory: ./bootstrap
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+        working-directory: ./bootstrap
+
+      - name: Terraform Validate
+        run: terraform validate
+        working-directory: ./bootstrap
